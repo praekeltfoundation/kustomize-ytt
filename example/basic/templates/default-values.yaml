@@ -1,0 +1,4 @@
+#@data/values
+---
+app_name: REPLACEME-app_name
+replicas: 1

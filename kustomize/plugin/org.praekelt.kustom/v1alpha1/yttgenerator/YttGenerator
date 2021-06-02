@@ -13,6 +13,7 @@ def ytt_config(cfg_path):
         return {
             "template_path": full_cfg["template_path"],
             "values": full_cfg["values"],
+            "extra_ytt_args": full_cfg.get("extra_ytt_args", []),
         }
 
 
@@ -23,7 +24,7 @@ def run_ytt(cfg):
         f.flush()
 
         output_args = ["-f", cfg["template_path"], "-f", f.name]
-        extra_args = ["--file-mark", "kustomization.yaml:exclude=true"]
+        extra_args = cfg["extra_ytt_args"]
         subprocess.run(["ytt", *output_args, *extra_args])
 
 
