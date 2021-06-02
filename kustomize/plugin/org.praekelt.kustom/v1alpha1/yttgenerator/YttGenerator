@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import subprocess
+import sys
+from tempfile import NamedTemporaryFile
+
+import yaml
+
+
+def ytt_config(cfg_path):
+    with open(cfg_path) as f:
+        full_cfg = yaml.safe_load(f)
+        return {
+            "template_path": full_cfg["template_path"],
+            "values": full_cfg["values"],
+        }
+
+
+def run_ytt(cfg):
+    with NamedTemporaryFile(suffix=".yaml") as f:
+        f.write(b"#@data/values\n---\n")
+        f.write(yaml.safe_dump(cfg["values"]).encode("utf8"))
+        f.flush()
+
+        output_args = ["-f", cfg["template_path"], "-f", f.name]
+        extra_args = ["--file-mark", "kustomization.yaml:exclude=true"]
+        subprocess.run(["ytt", *output_args, *extra_args])
+
+
+def main(args):
+    cfg = ytt_config(args[1])
+    run_ytt(cfg)
+
+
+if __name__ == "__main__":
+    main(sys.argv)
