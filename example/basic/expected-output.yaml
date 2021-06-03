@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: basic-example
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: basic-example
+  namespace: basic-example
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: basic-example
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: basic-example
+  name: basic-example
+  namespace: basic-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: basic-example
+  template:
+    metadata:
+      labels:
+        app: basic-example
+    spec:
+      containers:
+      - image: jmalloc/echo-server
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        name: echo-server
+        ports:
+        - containerPort: 8080
+          name: http

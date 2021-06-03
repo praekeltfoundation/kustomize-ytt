@@ -1,0 +1,9 @@
+apiVersion: org.praekelt.kustom/v1alpha1
+kind: YttGenerator
+metadata:
+  name: notImportantHere
+
+template_path: templates
+
+values:
+  app_name: basic-example
