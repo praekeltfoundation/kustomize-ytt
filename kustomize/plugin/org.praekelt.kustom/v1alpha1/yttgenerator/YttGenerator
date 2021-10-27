@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os.path
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
@@ -10,11 +11,16 @@ import yaml
 def ytt_config(cfg_path):
     with open(cfg_path) as f:
         full_cfg = yaml.safe_load(f)
-        return {
-            "template_path": full_cfg["template_path"],
-            "values": full_cfg["values"],
-            "extra_ytt_args": full_cfg.get("extra_ytt_args", []),
-        }
+    dvals = os.path.join(full_cfg["template_path"], "default-values.yaml")
+    cfg = {
+        "template_path": full_cfg["template_path"],
+        "values": full_cfg["values"],
+        "extra_ytt_args": full_cfg.get("extra_ytt_args", []),
+        "default_values": full_cfg.get("default_values", dvals),
+    }
+    if "overlay_path" in full_cfg:
+        cfg["overlay_path"] = full_cfg["overlay_path"]
+    return cfg
 
 
 def run_ytt(cfg):
@@ -23,9 +29,29 @@ def run_ytt(cfg):
         f.write(yaml.safe_dump(cfg["values"]).encode("utf8"))
         f.flush()
 
-        output_args = ["-f", cfg["template_path"], "-f", f.name]
-        extra_args = cfg["extra_ytt_args"]
-        subprocess.run(["ytt", *output_args, *extra_args])
+        if sys.stdin.buffer.peek(1):
+            # Input on stdin means we're running in transformer mode.
+            run_ytt_trans(cfg, f)
+        else:
+            run_ytt_gen(cfg, f)
+
+
+def run_ytt_trans(cfg, f):
+    input_args = ["-f-", "-f", cfg["default_values"]]
+    input_args += ["-f", cfg["overlay_path"], "-f", f.name]
+    extra_args = cfg["extra_ytt_args"]
+    # For some reason (possibly incomplete input?) we get an error when we pipe
+    # stdin directly to the subprocess. Since we don't expect the yaml to be so
+    # big that it doesn't fit in memory, we read the whole lot and pass it in
+    # as a bytes object.
+    input = sys.stdin.buffer.read()
+    subprocess.run(["ytt", *input_args, *extra_args], input=input)
+
+
+def run_ytt_gen(cfg, f):
+    input_args = ["-f", cfg["template_path"], "-f", f.name]
+    extra_args = cfg["extra_ytt_args"]
+    subprocess.run(["ytt", *input_args, *extra_args])
 
 
 def main(args):
