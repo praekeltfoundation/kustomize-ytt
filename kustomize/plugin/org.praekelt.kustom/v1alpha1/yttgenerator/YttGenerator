@@ -11,7 +11,13 @@ import yaml
 def ytt_config(cfg_path):
     with open(cfg_path) as f:
         full_cfg = yaml.safe_load(f)
+    # This is a bit of a hack. In the past we defaulted to default-values.yaml
+    # but now we often use values-schema.yaml instead. We don't want to have to
+    # set the default_values field for all new schema-based ytt sources, so
+    # having a fallback default is useful.
     dvals = os.path.join(full_cfg["template_path"], "default-values.yaml")
+    if not os.path.exists(dvals):
+        dvals = os.path.join(full_cfg["template_path"], "values-schema.yaml")
     cfg = {
         "template_path": full_cfg["template_path"],
         "values": full_cfg["values"],
